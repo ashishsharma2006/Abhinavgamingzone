@@ -1,0 +1,736 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Play Free Games - No Login Needed</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f0f8ff;
+            color: #333;
+        }
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 20px;
+            background-color: #4682b4;
+            color: white;
+            border-radius: 10px;
+        }
+        h1 {
+            margin: 0;
+        }
+        .game-container {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        canvas {
+            background: #000;
+            display: block;
+            margin: 0 auto;
+            border-radius: 5px;
+        }
+        .controls {
+            margin: 15px 0;
+            text-align: center;
+        }
+        button {
+            background-color: #4682b4;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            margin: 0 5px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        footer {
+            text-align: center;
+            margin-top: 40px;
+            color: #666;
+        }
+        .game-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        @media (max-width: 768px) {
+            .game-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Free Online Games</h1>
+        <p>Play directly in your browser - No downloads, no logins!</p>
+    </header>
+
+    <div class="game-grid">
+        <!-- Game 1: Snake -->
+        <div class="game-container">
+            <h2>Snake Game</h2>
+            <div class="controls">
+                <button onclick="snakeGame.reset()">Restart</button>
+                Score: <span id="snake-score">0</span>
+            </div>
+            <canvas id="snake-game" width="400" height="400"></canvas>
+        </div>
+
+        <!-- Game 2: Tic Tac Toe -->
+        <div class="game-container">
+            <h2>Tic Tac Toe</h2>
+            <div class="controls">
+                <button onclick="ticTacToe.reset()">New Game</button>
+                Status: <span id="ttt-status">Player X's turn</span>
+            </div>
+            <canvas id="tic-tac-toe" width="400" height="400"></canvas>
+        </div>
+
+        <!-- Game 3: Memory Card -->
+        <div class="game-container">
+            <h2>Memory Game</h2>
+            <div class="controls">
+                <button onclick="memoryGame.reset()">Restart</button>
+                Moves: <span id="memory-moves">0</span>
+            </div>
+            <div id="memory-game" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px;"></div>
+        </div>
+
+        <!-- Game 4: Breakout -->
+        <div class="game-container">
+            <h2>Breakout</h2>
+            <div class="controls">
+                <button onclick="breakoutGame.reset()">Restart</button>
+                Score: <span id="breakout-score">0</span>
+            </div>
+            <canvas id="breakout-game" width="400" height="500"></canvas>
+        </div>
+    </div>
+
+    <footer>
+        <p>All games run directly in your browser. No data is saved or sent to any server.</p>
+    </footer>
+
+    <script>
+        // ========== SNAKE GAME ==========
+        const snakeGame = (function() {
+            const canvas = document.getElementById('snake-game');
+            const ctx = canvas.getContext('2d');
+            const scoreElement = document.getElementById('snake-score');
+            
+            let snake = [{x: 200, y: 200}];
+            let food = {x: 0, y: 0};
+            let dx = 20;
+            let dy = 0;
+            let score = 0;
+            let speed = 150;
+            let gameLoop;
+            
+            function reset() {
+                clearInterval(gameLoop);
+                snake = [{x: 200, y: 200}];
+                dx = 20;
+                dy = 0;
+                score = 0;
+                scoreElement.textContent = score;
+                createFood();
+                gameLoop = setInterval(main, speed);
+            }
+            
+            function createFood() {
+                food = {
+                    x: Math.floor(Math.random() * (canvas.width / 20)) * 20,
+                    y: Math.floor(Math.random() * (canvas.height / 20)) * 20
+                };
+                
+                // Make sure food doesn't appear on snake
+                for (let segment of snake) {
+                    if (segment.x === food.x && segment.y === food.y) {
+                        return createFood();
+                    }
+                }
+            }
+            
+            function main() {
+                if (isGameOver()) {
+                    clearInterval(gameLoop);
+                    alert('Game Over! Your score: ' + score);
+                    return;
+                }
+                
+                setTimeout(() => {
+                    clearCanvas();
+                    drawFood();
+                    moveSnake();
+                    drawSnake();
+                }, 0);
+            }
+            
+            function clearCanvas() {
+                ctx.fillStyle = 'black';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+            }
+            
+            function drawSnake() {
+                snake.forEach((segment, index) => {
+                    ctx.fillStyle = index === 0 ? 'lime' : 'green';
+                    ctx.fillRect(segment.x, segment.y, 18, 18);
+                });
+            }
+            
+            function drawFood() {
+                ctx.fillStyle = 'red';
+                ctx.fillRect(food.x, food.y, 18, 18);
+            }
+            
+            function moveSnake() {
+                const head = {x: snake[0].x + dx, y: snake[0].y + dy};
+                snake.unshift(head);
+                
+                if (head.x === food.x && head.y === food.y) {
+                    score += 10;
+                    scoreElement.textContent = score;
+                    createFood();
+                    
+                    // Increase speed every 50 points
+                    if (score % 50 === 0 && speed > 50) {
+                        speed -= 10;
+                        clearInterval(gameLoop);
+                        gameLoop = setInterval(main, speed);
+                    }
+                } else {
+                    snake.pop();
+                }
+            }
+            
+            function isGameOver() {
+                const head = snake[0];
+                
+                // Hit wall
+                if (head.x < 0 || head.x >= canvas.width || head.y < 0 || head.y >= canvas.height) {
+                    return true;
+                }
+                
+                // Hit self
+                for (let i = 1; i < snake.length; i++) {
+                    if (head.x === snake[i].x && head.y === snake[i].y) {
+                        return true;
+                    }
+                }
+                
+                return false;
+            }
+            
+            // Keyboard controls
+            document.addEventListener('keydown', (e) => {
+                const key = e.key;
+                const goingUp = dy === -20;
+                const goingDown = dy === 20;
+                const goingRight = dx === 20;
+                const goingLeft = dx === -20;
+                
+                if (key === 'ArrowUp' && !goingDown) {
+                    dx = 0;
+                    dy = -20;
+                } else if (key === 'ArrowDown' && !goingUp) {
+                    dx = 0;
+                    dy = 20;
+                } else if (key === 'ArrowLeft' && !goingRight) {
+                    dx = -20;
+                    dy = 0;
+                } else if (key === 'ArrowRight' && !goingLeft) {
+                    dx = 20;
+                    dy = 0;
+                }
+            });
+            
+            // Touch controls for mobile
+            let touchStartX = 0;
+            let touchStartY = 0;
+            
+            canvas.addEventListener('touchstart', (e) => {
+                touchStartX = e.touches[0].clientX;
+                touchStartY = e.touches[0].clientY;
+            }, false);
+            
+            canvas.addEventListener('touchmove', (e) => {
+                if (!touchStartX || !touchStartY) return;
+                
+                const touchEndX = e.touches[0].clientX;
+                const touchEndY = e.touches[0].clientY;
+                
+                const dx = touchEndX - touchStartX;
+                const dy = touchEndY - touchStartY;
+                
+                // Determine swipe direction
+                if (Math.abs(dx) > Math.abs(dy)) {
+                    if (dx > 0 && snakeGame.dx !== -20) {
+                        snakeGame.dx = 20;
+                        snakeGame.dy = 0;
+                    } else if (snakeGame.dx !== 20) {
+                        snakeGame.dx = -20;
+                        snakeGame.dy = 0;
+                    }
+                } else {
+                    if (dy > 0 && snakeGame.dy !== -20) {
+                        snakeGame.dx = 0;
+                        snakeGame.dy = 20;
+                    } else if (snakeGame.dy !== 20) {
+                        snakeGame.dx = 0;
+                        snakeGame.dy = -20;
+                    }
+                }
+                
+                touchStartX = 0;
+                touchStartY = 0;
+                e.preventDefault();
+            }, false);
+            
+            return { reset };
+        })();
+
+        // ========== TIC TAC TOE ==========
+        const ticTacToe = (function() {
+            const canvas = document.getElementById('tic-tac-toe');
+            const ctx = canvas.getContext('2d');
+            const statusElement = document.getElementById('ttt-status');
+            
+            let board = Array(9).fill('');
+            let currentPlayer = 'X';
+            let gameOver = false;
+            
+            function reset() {
+                board = Array(9).fill('');
+                currentPlayer = 'X';
+                gameOver = false;
+                statusElement.textContent = "Player X's turn";
+                drawBoard();
+            }
+            
+            function drawBoard() {
+                ctx.fillStyle = 'white';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                
+                // Draw grid
+                ctx.strokeStyle = 'black';
+                ctx.lineWidth = 2;
+                
+                // Vertical lines
+                ctx.beginPath();
+                ctx.moveTo(canvas.width/3, 0);
+                ctx.lineTo(canvas.width/3, canvas.height);
+                ctx.stroke();
+                
+                ctx.beginPath();
+                ctx.moveTo(canvas.width*2/3, 0);
+                ctx.lineTo(canvas.width*2/3, canvas.height);
+                ctx.stroke();
+                
+                // Horizontal lines
+                ctx.beginPath();
+                ctx.moveTo(0, canvas.height/3);
+                ctx.lineTo(canvas.width, canvas.height/3);
+                ctx.stroke();
+                
+                ctx.beginPath();
+                ctx.moveTo(0, canvas.height*2/3);
+                ctx.lineTo(canvas.width, canvas.height*2/3);
+                ctx.stroke();
+                
+                // Draw X's and O's
+                for (let i = 0; i < 9; i++) {
+                    const row = Math.floor(i / 3);
+                    const col = i % 3;
+                    const x = col * (canvas.width/3) + (canvas.width/6);
+                    const y = row * (canvas.height/3) + (canvas.height/6);
+                    
+                    if (board[i] === 'X') {
+                        ctx.strokeStyle = 'blue';
+                        ctx.lineWidth = 4;
+                        ctx.beginPath();
+                        ctx.moveTo(x - 30, y - 30);
+                        ctx.lineTo(x + 30, y + 30);
+                        ctx.stroke();
+                        ctx.beginPath();
+                        ctx.moveTo(x + 30, y - 30);
+                        ctx.lineTo(x - 30, y + 30);
+                        ctx.stroke();
+                    } else if (board[i] === 'O') {
+                        ctx.strokeStyle = 'red';
+                        ctx.lineWidth = 4;
+                        ctx.beginPath();
+                        ctx.arc(x, y, 30, 0, Math.PI * 2);
+                        ctx.stroke();
+                    }
+                }
+            }
+            
+            function handleClick(e) {
+                if (gameOver) return;
+                
+                const rect = canvas.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                
+                const col = Math.floor(x / (canvas.width/3));
+                const row = Math.floor(y / (canvas.height/3));
+                const index = row * 3 + col;
+                
+                if (board[index] !== '') return;
+                
+                board[index] = currentPlayer;
+                drawBoard();
+                
+                if (checkWin()) {
+                    statusElement.textContent = `Player ${currentPlayer} wins!`;
+                    gameOver = true;
+                    return;
+                }
+                
+                if (board.every(cell => cell !== '')) {
+                    statusElement.textContent = "It's a draw!";
+                    gameOver = true;
+                    return;
+                }
+                
+                currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
+                statusElement.textContent = `Player ${currentPlayer}'s turn`;
+            }
+            
+            function checkWin() {
+                const winPatterns = [
+                    [0, 1, 2], [3, 4, 5], [6, 7, 8], // rows
+                    [0, 3, 6], [1, 4, 7], [2, 5, 8], // columns
+                    [0, 4, 8], [2, 4, 6]             // diagonals
+                ];
+                
+                return winPatterns.some(pattern => {
+                    const [a, b, c] = pattern;
+                    return board[a] !== '' && board[a] === board[b] && board[a] === board[c];
+                });
+            }
+            
+            canvas.addEventListener('click', handleClick);
+            
+            // For mobile touch
+            canvas.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                const touch = e.touches[0];
+                const mouseEvent = new MouseEvent('click', {
+                    clientX: touch.clientX,
+                    clientY: touch.clientY
+                });
+                canvas.dispatchEvent(mouseEvent);
+            }, false);
+            
+            reset(); // Initialize the game
+            
+            return { reset };
+        })();
+
+        // ========== MEMORY GAME ==========
+        const memoryGame = (function() {
+            const container = document.getElementById('memory-game');
+            const movesElement = document.getElementById('memory-moves');
+            
+            let cards = ['A', 'A', 'B', 'B', 'C', 'C', 'D', 'D', 'E', 'E', 'F', 'F', 'G', 'G', 'H', 'H'];
+            let flippedCards = [];
+            let matchedPairs = 0;
+            let moves = 0;
+            let canFlip = true;
+            
+            function reset() {
+                // Shuffle cards
+                cards = [...cards].sort(() => Math.random() - 0.5);
+                flippedCards = [];
+                matchedPairs = 0;
+                moves = 0;
+                movesElement.textContent = moves;
+                canFlip = true;
+                
+                // Clear container
+                container.innerHTML = '';
+                
+                // Create card elements
+                cards.forEach((card, index) => {
+                    const cardElement = document.createElement('div');
+                    cardElement.className = 'memory-card';
+                    cardElement.dataset.index = index;
+                    cardElement.dataset.value = card;
+                    cardElement.style.backgroundColor = '#4682b4';
+                    cardElement.style.height = '80px';
+                    cardElement.style.display = 'flex';
+                    cardElement.style.alignItems = 'center';
+                    cardElement.style.justifyContent = 'center';
+                    cardElement.style.color = 'white';
+                    cardElement.style.fontSize = '24px';
+                    cardElement.style.cursor = 'pointer';
+                    cardElement.style.borderRadius = '5px';
+                    cardElement.addEventListener('click', flipCard);
+                    container.appendChild(cardElement);
+                });
+            }
+            
+            function flipCard() {
+                if (!canFlip || flippedCards.length >= 2 || this.textContent !== '') return;
+                
+                this.textContent = this.dataset.value;
+                this.style.backgroundColor = 'white';
+                this.style.color = '#4682b4';
+                flippedCards.push(this);
+                
+                if (flippedCards.length === 2) {
+                    moves++;
+                    movesElement.textContent = moves;
+                    checkForMatch();
+                }
+            }
+            
+            function checkForMatch() {
+                const [card1, card2] = flippedCards;
+                
+                if (card1.dataset.value === card2.dataset.value) {
+                    // Match found
+                    card1.removeEventListener('click', flipCard);
+                    card2.removeEventListener('click', flipCard);
+                    card1.style.backgroundColor = 'lightgreen';
+                    card2.style.backgroundColor = 'lightgreen';
+                    flippedCards = [];
+                    matchedPairs++;
+                    
+                    if (matchedPairs === cards.length / 2) {
+                        setTimeout(() => {
+                            alert(`Congratulations! You won in ${moves} moves!`);
+                        }, 500);
+                    }
+                } else {
+                    // No match
+                    canFlip = false;
+                    setTimeout(() => {
+                        card1.textContent = '';
+                        card2.textContent = '';
+                        card1.style.backgroundColor = '#4682b4';
+                        card2.style.backgroundColor = '#4682b4';
+                        flippedCards = [];
+                        canFlip = true;
+                    }, 1000);
+                }
+            }
+            
+            return { reset };
+        })();
+
+        // ========== BREAKOUT GAME ==========
+        const breakoutGame = (function() {
+            const canvas = document.getElementById('breakout-game');
+            const ctx = canvas.getContext('2d');
+            const scoreElement = document.getElementById('breakout-score');
+            
+            let x = canvas.width / 2;
+            let y = canvas.height - 30;
+            let dx = 4;
+            let dy = -4;
+            let ballRadius = 10;
+            let paddleHeight = 15;
+            let paddleWidth = 80;
+            let paddleX = (canvas.width - paddleWidth) / 2;
+            let rightPressed = false;
+            let leftPressed = false;
+            let score = 0;
+            let gameRunning = true;
+            
+            // Brick settings
+            const brickRowCount = 5;
+            const brickColumnCount = 8;
+            const brickWidth = 75;
+            const brickHeight = 20;
+            const brickPadding = 10;
+            const brickOffsetTop = 60;
+            const brickOffsetLeft = 30;
+            
+            // Create bricks
+            let bricks = [];
+            for (let c = 0; c < brickColumnCount; c++) {
+                bricks[c] = [];
+                for (let r = 0; r < brickRowCount; r++) {
+                    bricks[c][r] = { x: 0, y: 0, status: 1 };
+                }
+            }
+            
+            function reset() {
+                x = canvas.width / 2;
+                y = canvas.height - 30;
+                dx = 4;
+                dy = -4;
+                paddleX = (canvas.width - paddleWidth) / 2;
+                score = 0;
+                scoreElement.textContent = score;
+                gameRunning = true;
+                
+                // Reset bricks
+                for (let c = 0; c < brickColumnCount; c++) {
+                    for (let r = 0; r < brickRowCount; r++) {
+                        bricks[c][r].status = 1;
+                    }
+                }
+                
+                draw();
+            }
+            
+            function draw() {
+                if (!gameRunning) return;
+                
+                // Clear canvas
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                
+                // Draw bricks
+                for (let c = 0; c < brickColumnCount; c++) {
+                    for (let r = 0; r < brickRowCount; r++) {
+                        if (bricks[c][r].status === 1) {
+                            const brickX = c * (brickWidth + brickPadding) + brickOffsetLeft;
+                            const brickY = r * (brickHeight + brickPadding) + brickOffsetTop;
+                            bricks[c][r].x = brickX;
+                            bricks[c][r].y = brickY;
+                            
+                            ctx.beginPath();
+                            ctx.rect(brickX, brickY, brickWidth, brickHeight);
+                            ctx.fillStyle = ['#FF5733', '#33FF57', '#3357FF', '#F3FF33', '#FF33F3'][r];
+                            ctx.fill();
+                            ctx.closePath();
+                        }
+                    }
+                }
+                
+                // Draw paddle
+                ctx.beginPath();
+                ctx.rect(paddleX, canvas.height - paddleHeight, paddleWidth, paddleHeight);
+                ctx.fillStyle = '#0095DD';
+                ctx.fill();
+                ctx.closePath();
+                
+                // Draw ball
+                ctx.beginPath();
+                ctx.arc(x, y, ballRadius, 0, Math.PI * 2);
+                ctx.fillStyle = '#0095DD';
+                ctx.fill();
+                ctx.closePath();
+                
+                // Collision detection
+                collisionDetection();
+                
+                // Wall collision
+                if (x + dx > canvas.width - ballRadius || x + dx < ballRadius) {
+                    dx = -dx;
+                }
+                if (y + dy < ballRadius) {
+                    dy = -dy;
+                } else if (y + dy > canvas.height - ballRadius) {
+                    if (x > paddleX && x < paddleX + paddleWidth) {
+                        dy = -dy;
+                    } else {
+                        gameRunning = false;
+                        alert('Game Over! Your score: ' + score);
+                        return;
+                    }
+                }
+                
+                // Paddle movement
+                if (rightPressed && paddleX < canvas.width - paddleWidth) {
+                    paddleX += 7;
+                } else if (leftPressed && paddleX > 0) {
+                    paddleX -= 7;
+                }
+                
+                x += dx;
+                y += dy;
+                
+                requestAnimationFrame(draw);
+            }
+            
+            function collisionDetection() {
+                for (let c = 0; c < brickColumnCount; c++) {
+                    for (let r = 0; r < brickRowCount; r++) {
+                        const brick = bricks[c][r];
+                        if (brick.status === 1) {
+                            if (
+                                x > brick.x &&
+                                x < brick.x + brickWidth &&
+                                y > brick.y &&
+                                y < brick.y + brickHeight
+                            ) {
+                                dy = -dy;
+                                brick.status = 0;
+                                score += 10;
+                                scoreElement.textContent = score;
+                                
+                                // Check if all bricks are cleared
+                                let allCleared = true;
+                                for (let c = 0; c < brickColumnCount; c++) {
+                                    for (let r = 0; r < brickRowCount; r++) {
+                                        if (bricks[c][r].status === 1) {
+                                            allCleared = false;
+                                            break;
+                                        }
+                                    }
+                                    if (!allCleared) break;
+                                }
+                                
+                                if (allCleared) {
+                                    gameRunning = false;
+                                    alert('Congratulations! You cleared all bricks!');
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            
+            // Keyboard controls
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Right' || e.key === 'ArrowRight') {
+                    rightPressed = true;
+                } else if (e.key === 'Left' || e.key === 'ArrowLeft') {
+                    leftPressed = true;
+                }
+            });
+            
+            document.addEventListener('keyup', (e) => {
+                if (e.key === 'Right' || e.key === 'ArrowRight') {
+                    rightPressed = false;
+                } else if (e.key === 'Left' || e.key === 'ArrowLeft') {
+                    leftPressed = false;
+                }
+            });
+            
+            // Touch controls for mobile
+            canvas.addEventListener('touchmove', (e) => {
+                e.preventDefault();
+                const relativeX = e.touches[0].clientX - canvas.offsetLeft;
+                if (relativeX > paddleWidth/2 && relativeX < canvas.width - paddleWidth/2) {
+                    paddleX = relativeX - paddleWidth/2;
+                }
+            }, false);
+            
+            reset(); // Initialize the game
+            
+            return { reset };
+        })();
+
+        // Initialize all games when page loads
+        window.onload = function() {
+            snakeGame.reset();
+            ticTacToe.reset();
+            memoryGame.reset();
+            breakoutGame.reset();
+        };
+    </script>
+</body>
+</html>
